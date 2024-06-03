@@ -21,24 +21,55 @@ namespace ProyectoCItas.Services
         public async Task CreateCitaAsync(Cita cita)
         {
             var newId = ObjectId.GenerateNewId();
-            cita.CitaId = newId.ToString();
+            cita.Id = newId.ToString();
 
             await _cita.InsertOneAsync(cita);
         }
-        public async Task<Cita> GetCitaEstadoAsync(string medicoId, string dia, string horaInicio)
+        public async Task<Cita> GetCitaEstadoAsync(string medicoId, DateTime dia, string hora)
         {
-            return await _cita.Find(cita => (cita.HoraInicio == horaInicio && cita.dia == dia && cita.Estado == "registrado" && cita.MedicoId == medicoId.ToString())).FirstOrDefaultAsync();
+            return await _cita.Find(cita =>
+                cita.Hora == hora && // Comparar las horas como strings
+                cita.Dia.Date == dia.Date && // Comparar solo la fecha
+                cita.Estado == "Confirmada" &&
+                cita.MedicoId == medicoId)
+            .FirstOrDefaultAsync();
+        }
+        public async Task<Cita> GetCitaByIdAsync(string id)
+        {
+            var objectId = ObjectId.Parse(id);
+            return await _cita.Find(cita => cita.Id == objectId.ToString()).FirstOrDefaultAsync();
+        }
+
+        public async Task UpdateCitaAsync(Cita cita)
+        {
+            var filter = Builders<Cita>.Filter.Eq(c => c.Id, cita.Id);
+            await _cita.ReplaceOneAsync(filter, cita);
         }
         public async Task<Cita> GetCitaIdAsync(string _citaId, string estado)
         {
             var objectId = ObjectId.Parse(_citaId);
-            return await _cita.Find(cita => (cita.CitaId == objectId.ToString())).FirstOrDefaultAsync();
+            return await _cita.Find(cita => (cita.Id == objectId.ToString())).FirstOrDefaultAsync();
         }
 
-        public async Task<List<Cita>> GetCitasAsync()
+        public async Task<List<Cita>> GetCitasPorDoctorYHoraAsync(string medicoId, string hora)
         {
-            return await _cita.Find(horario => true).ToListAsync();
+            var filter = Builders<Cita>.Filter.And(
+                Builders<Cita>.Filter.Eq(c => c.MedicoId, medicoId),
+                Builders<Cita>.Filter.Eq(c => c.Hora, hora)
+            );
+
+            return await _cita.Find(filter).ToListAsync();
         }
+
+
+
+        public async Task<List<Cita>> GetCitaAsync()
+        {
+            return await _cita.Find(patient => true).ToListAsync();
+        }
+
+
+
     }
 
     namespace ProyectoCItas.Settings
